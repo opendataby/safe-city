@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Безопасный город</title>
+
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="//cdn.leafletjs.com/leaflet-0.7.2/leaflet.css"/>
+    <link rel="stylesheet" href="//api.tiles.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v0.0.2/leaflet.fullscreen.css" />
+    <link rel="stylesheet" href="//api.tiles.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/MarkerCluster.css"/>
+    <link rel="stylesheet" href="//api.tiles.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/MarkerCluster.Default.css"/>
+    <style>
+        body {
+            padding: 60px 0 0;
+        }
+
+        #map-container {
+            width: 100%;
+            height: 400px;
+        }
+
+        .container .jumbotron {
+            margin: 30px 0 0;
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        .container h2 {
+            margin-top: -30px;
+            padding-top: 60px;
+        }
+
+        .container h3 {
+            padding-top: 20px;
+        }
+
+        .footer {
+            border-top: 1px solid #E5E5E5;
+            color: #777777;
+            margin-top: 80px;
+            padding-bottom: 40px;
+            padding-top: 40px;
+            text-align: center;
+        }
+
+        .info {
+            padding: 6px 8px;
+            font: 14px/16px Arial, Helvetica, sans-serif;
+            background: white;
+            background: rgba(255,255,255,0.8);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+        }
+        .info h4 {
+            margin: 0 0 5px;
+            color: #777;
+        }
+
+        .legend {
+            text-align: left;
+            line-height: 18px;
+            color: #555;
+        }
+
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
+        }
+
+
+
+        .bar {
+          fill: steelblue;
+        }
+
+        .bar:hover {
+          fill: brown;
+        }
+
+        .axis {
+          font: 10px sans-serif;
+        }
+
+        .axis path,
+        .axis line {
+          fill: none;
+          stroke: #000;
+          shape-rendering: crispEdges;
+        }
+
+        .x.axis path {
+          display: none;
+        }
+    </style>
+</head>
+<body data-spy="scroll" data-target=".navbar">
+<nav class="navbar navbar-default navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#">Безопасный город</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div class="collapse navbar-collapse">
+            <ul class="nav navbar-nav">
+                <li class="active"><a href="#map">Карта</a></li>
+                <li><a href="#graph">Графики</a></li>
+                <li><a href="#info">Информация</a></li>
+                <li><a href="#data">Данные</a></li>
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container-fluid -->
+</nav>
+
+<div class="container">
+    <div class="page-header">
+        <h1>Безопасный город</h1>
+        <p>Информационно-аналитическое приложение для предупреждения чрезвычайных ситуаций в Минске</p>
+    </div>
+
+    <h2 id="map">Карта чрезвычайных происшествий</h2>
+    <div id="map-container"></div>
+
+    <h2 id="graph">Графики</h2>
+    <div id="graph-container"></div>
+
+    <h2 id="info">Общая информация</h2>
+    <div id="info-container"></div>
+
+    <h2 id="data">Данные</h2>
+    <p>Данные о происшедствиях и географических делениях взяты на портале открытых данных
+        <a href="http://portal.opendata.by/">opendata.by</a>.</p>
+</div>
+
+<footer class="footer">
+    <p>Приложение разработано на основе данных суточной сводки Минского городского управления МЧС во ходе третьей
+        Лаборатории будущего Hack for Future 3-4 мая 2014 г.</p>
+</footer>
+
+<script src="//code.jquery.com/jquery-2.1.1.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.js"></script>
+<script src="//cdn.leafletjs.com/leaflet-0.7.2/leaflet.js"></script>
+<script src='//api.tiles.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v0.0.2/Leaflet.fullscreen.min.js'></script>
+<script src="//api.tiles.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/leaflet.markercluster.js"></script>
+<script src="http://tbicr.github.io/LeafLetSamples/heatmapjs/QuadTree.js"></script>
+<script src="http://tbicr.github.io/LeafLetSamples/heatmapjs/heatmap.js"></script>
+<script src="http://tbicr.github.io/LeafLetSamples/heatmapjs/heatmap-leaflet.js"></script>
+<script src="http://d3js.org/d3.v3.js"></script>
+
+<script>
+    var map = L.map('map-container').setView([53.9022756, 27.5618753], 11);
+    L.tileLayer('http://{s}.tile.openstreetmap.com/{z}/{x}/{y}.png', {
+        attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+        maxZoom: 18
+    }).addTo(map);
+
+    L.control.fullscreen().addTo(map);
+
+    var RegionLayer = function (map, subMultiplier, pointInRegion) {
+        var that = this;
+        this.multiplier = 1;
+        this.subMultiplier = subMultiplier;
+        this.data = null;
+
+        var infoControl = L.control();
+
+        infoControl.onAdd = function (map) {
+            this._div = L.DomUtil.create('div', 'info');
+            this.update();
+            return this._div;
+        };
+
+        infoControl.update = function (props) {
+            this._div.innerHTML = '<h4>Происшествия</h4>' +  (props ?
+                '<b>' + props.name + '</b><br />' + props.density + ' вызовов'
+                : 'Наведите курсор на район');
+        };
+
+        var legendControl = L.control({position: 'bottomright'});
+
+        legendControl.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'info legend'),
+                    grades = [0, 1, 2, 5, 10, 20, 50, 100],
+                    labels = [],
+                    from, to;
+            for (var i = 0; i < grades.length; i++) {
+                from = grades[i] * that.multiplier * that.subMultiplier;
+                to = grades[i + 1] * that.multiplier * that.subMultiplier;
+                labels.push('<i style="background:' + getColor(from + 1) + '"></i> ' +
+                            from + (to ? '&ndash;' + to : '+'));
+            }
+
+            div.innerHTML = labels.join('<br>');
+            return div;
+        };
+
+        this.layer = L.geoJson(null, {
+            style: setStyle,
+            onEachFeature: onEachFeature
+        });
+
+        this.layer.onAdd = function (map) {
+            infoControl.addTo(map);
+            legendControl.addTo(map);
+            return L.GeoJSON.prototype.onAdd.apply(this, arguments);
+        };
+
+        this.layer.onRemove = function (map) {
+            infoControl.removeFrom(map);
+            legendControl.removeFrom(map);
+            return L.GeoJSON.prototype.onRemove.apply(this, arguments);
+        };
+
+        function getColor(d) {
+            var m = that.multiplier * that.subMultiplier;
+            return d > 100 * m ? '#800026' :
+                   d >  50 * m ? '#BD0026' :
+                   d >  20 * m ? '#E31A1C' :
+                   d >  10 * m ? '#FC4E2A' :
+                   d >   5 * m ? '#FD8D3C' :
+                   d >   2 * m ? '#FEB24C' :
+                   d >   1 * m ? '#FED976' :
+                                 '#FFEDA0';
+        }
+
+        function setStyle(feature) {
+            return {
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                dashArray: '3',
+                fillOpacity: 0.7,
+                fillColor: getColor(feature.properties.density)
+            };
+        }
+
+        function highlightFeature(e) {
+            var layer = e.target;
+
+            layer.setStyle({
+                weight: 5,
+                color: '#666',
+                dashArray: '',
+                fillOpacity: 0.7
+            });
+
+            if (!L.Browser.ie && !L.Browser.opera) {
+                layer.bringToFront();
+            }
+
+            infoControl.update(layer.feature.properties);
+        }
+
+        function resetHighlight(e) {
+            that.layer.resetStyle(e.target);
+            infoControl.update();
+        }
+
+        function zoomToFeature(e) {
+            map.fitBounds(e.target.getBounds());
+        }
+
+        function onEachFeature(feature, layer) {
+            layer.on({
+                mouseover: highlightFeature,
+                mouseout: resetHighlight,
+                click: zoomToFeature
+            });
+        }
+
+        this.process = function (data) {
+            var geoJsonRecords = that.data.features;
+            for (var i = 0, li = geoJsonRecords.length; i < li; i++) {
+                var geoJsonRecord = geoJsonRecords[i];
+                if (geoJsonRecord.properties.density === undefined) {
+                    geoJsonRecord.properties.density = 0;
+                    var rank = (data.result.total).toString().length - 1 - 2;
+                    that.multiplayer = Math.pow(10, rank >= 1 ? rank : 0);
+                }
+                var dataRecords = data.result.records;
+                for (var k = 0, lk = dataRecords.length; k < lk; k++) {
+                    var dataRecord = dataRecords[k];
+                    if (pointInRegion(dataRecord, geoJsonRecord)) {
+                        geoJsonRecord.properties.density++;
+                    }
+                }
+
+            }
+            that.layer.addData(that.data);
+        }
+    };
+
+    var markers = L.markerClusterGroup({maxClusterRadius: 40, disableClusteringAtZoom: 15});
+    var heatmap = L.TileLayer.heatMap({
+        radius: {
+            value: 250,
+            absolute: true
+        },
+        opacity: 0.8,
+        gradient: {
+            0.45: "rgb(0,0,255)",
+            0.55: "rgb(0,255,255)",
+            0.65: "rgb(0,255,0)",
+            0.95: "yellow",
+            1.0: "rgb(255,0,0)"
+        }
+    });
+
+    var administrative = new RegionLayer(map, 1, function (dataRecord, geoJsonRecord) {
+        return dataRecord.District + ' район' === geoJsonRecord.properties.name;
+    });
+
+    var jeses = new RegionLayer(map, 0.2, function (dataRecord, geoJsonRecord) {
+        return dataRecord.Jes === geoJsonRecord.properties.name;
+    });
+
+    var loadedData;
+
+    var dataKey = 'f9d30d33-3427-4403-8bfe-4a0b33776092';
+    $.getJSON('http://portal.opendata.by/api/action/datastore/search.json?resource_id=' + dataKey, function (data) {
+        var records = data.result.records;
+        var heatmapCanvasData = [];
+        for (var i = 0, l = records.length; i < l; i++) {
+            var record = records[i];
+            var marker = L.marker([record.Latitude, record.Longitude], {title: record.Date});
+            marker.bindPopup(record.Date);
+            markers.addLayer(marker);
+            heatmapCanvasData.push({lat: record.Latitude, lon: record.Longitude, value: 1});
+        }
+        heatmap.setData(heatmapCanvasData);
+        loadedData = data;
+        if (administrative.data) {
+            administrative.process(loadedData);
+        }
+        if (jeses.data) {
+            jeses.process(loadedData);
+        }
+        d3process(records);
+        processInfo(data);
+    });
+
+    $.getJSON('http://portal.opendata.by/sites/default/files/l9.json', function (data) {
+        administrative.data = data;
+        if (loadedData) {
+            administrative.process(loadedData);
+        }
+    });
+
+    $.getJSON('http://portal.opendata.by/sites/default/files/jes.json', function (data) {
+        jeses.data = data;
+        if (loadedData) {
+            jeses.process(loadedData);
+        }
+    });
+
+    map.addLayer(markers);
+
+    L.control.layers({
+        'Обычная карта': markers,
+        'Тепловая карта': heatmap,
+        'Адмистративное деление': administrative.layer,
+        'Деление по жесам': jeses.layer
+    }, null, {collapsed: false}).addTo(map);
+
+
+    function d3process (data) {
+        var margin = {top: 20, right: 20, bottom: 30, left: 40},
+            width = 960 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
+
+        var x = d3.scale.ordinal()
+            .rangeRoundBands([0, width], .1);
+
+        var y = d3.scale.linear()
+            .range([height, 0]);
+
+        var xAxis = d3.svg.axis()
+            .scale(x)
+            .orient("bottom");
+
+        var yAxis = d3.svg.axis()
+            .scale(y)
+            .orient("left")
+            .ticks(10, "%");
+
+        var svg = d3.select("#graph-container").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+          x.domain(data.map(function(d) { return d.District; }));
+          y.domain([0, d3.sum(data, function(d) { return 1; })]);
+
+          svg.append("g")
+              .attr("class", "x axis")
+              .attr("transform", "translate(0," + height + ")")
+              .call(xAxis);
+
+          svg.append("g")
+              .attr("class", "y axis")
+              .call(yAxis)
+            .append("text")
+              .attr("transform", "rotate(-90)")
+              .attr("y", 6)
+              .attr("dy", ".71em")
+              .style("text-anchor", "end")
+              .text("Frequency");
+
+          svg.selectAll(".bar")
+              .data(data)
+            .enter().append("rect")
+              .attr("class", "bar")
+              .attr("x", function(d) { return x(d.District); })
+              .attr("width", x.rangeBand())
+              .attr("y", function(d) {
+                      return y(100); })
+              .attr("height", function(d) {
+                      return height - 100; });
+
+        function type(d) {
+          d.frequency = +d.frequency;
+          return d;
+        }
+    }
+
+
+    function processInfo (data) {
+        var container = $('#info-container');
+
+        container.append('<h3>Общее количество происшествий</h3>');
+        container.append('<p>' + data.result.total + '</p>');
+
+        container.append('<h3>Количество происшествий по административным районам города</h3>');
+        var html = '<table class="table table-striped table-hover table-condensed">';
+        var countPerAdministrative = {};
+        for (var i = 0, li = data.result.records.length; i < li; i++) {
+            if (countPerAdministrative[data.result.records[i].District] === undefined) {
+                countPerAdministrative[data.result.records[i].District] = 0;
+            }
+            for (var administrative in countPerAdministrative) {
+                if (data.result.records[i].District === administrative) {
+                    countPerAdministrative[administrative]++;
+                }
+            }
+        }
+        for (var administrative in countPerAdministrative) {
+            html += '<tr><td>' + administrative + '</td><td style="text-align: right">' + countPerAdministrative[administrative] + '</td></tr>';
+        }
+        html += '</table>';
+        container.append(html);
+
+        container.append('<h3>Количество происшествий по отдельным причинам</h3>');
+        var html = '<table class="table table-striped table-hover table-condensed">';
+        var countPerCause = {};
+        for (var i = 0, li = data.result.records.length; i < li; i++) {
+            if (countPerCause[data.result.records[i].Cause] === undefined) {
+                countPerCause[data.result.records[i].Cause] = 0;
+            }
+            for (var cause in countPerCause) {
+                if (data.result.records[i].Cause === cause) {
+                    countPerCause[cause]++;
+                }
+            }
+        }
+        for (var cause in countPerCause) {
+            html += '<tr><td>' + cause + '</td><td style="text-align: right">' + countPerCause[cause] + '</td></tr>';
+        }
+        html += '</table>';
+        container.append(html);
+    }
+
+</script>
+</body>
+</html>
