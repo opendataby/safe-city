@@ -157,6 +157,11 @@
 <script src="http://d3js.org/d3.v3.js"></script>
 
 <script>
+    var API_BASE = 'http://odata.by/api/action/datastore/search.json?resource_id=';
+    var DATA_URL = API_BASE + '1da37dfe-9665-4dd6-843a-cde0dfccff64';
+    var REGIONS_BORDERS_URL = API_BASE + '81709047-53a4-4fe6-b082-6be10da8a1ac';
+    var JES_BORDERS_URL = API_BASE + '5d49d49e-a76c-4c0d-8043-7807d1496853';
+
     var map = L.map('map-container').setView([53.9022756, 27.5618753], 11);
     L.tileLayer('http://{s}.tile.openstreetmap.com/{z}/{x}/{y}.png', {
         attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
@@ -278,24 +283,29 @@
         }
 
         this.process = function (data) {
-            var geoJsonRecords = that.data.features;
-            for (var i = 0, li = geoJsonRecords.length; i < li; i++) {
-                var geoJsonRecord = geoJsonRecords[i];
-                if (geoJsonRecord.properties.density === undefined) {
-                    geoJsonRecord.properties.density = 0;
+            var geometries = [];
+            var records = that.data.result.records;
+            for (var i = 0, li = records.length; i < li; i++) {
+                var record = records[i];
+                geometries.push(JSON.parse(record.geojson));
+                if (record.density === undefined) {
+                    record.density = 0;
                     var rank = (data.result.total).toString().length - 1 - 2;
                     that.multiplayer = Math.pow(10, rank >= 1 ? rank : 0);
                 }
                 var dataRecords = data.result.records;
                 for (var k = 0, lk = dataRecords.length; k < lk; k++) {
                     var dataRecord = dataRecords[k];
-                    if (pointInRegion(dataRecord, geoJsonRecord)) {
-                        geoJsonRecord.properties.density++;
+                    if (pointInRegion(dataRecord, record)) {
+                        record.density++;
                     }
                 }
 
             }
-            that.layer.addData(that.data);
+            that.layer.addData({
+                'type': 'GeometryCollection',
+                'geometries': geometries
+            });
         }
     };
 
@@ -315,18 +325,17 @@
         }
     });
 
-    var administrative = new RegionLayer(map, 1, function (dataRecord, geoJsonRecord) {
-        return dataRecord.District + ' район' === geoJsonRecord.properties.name;
+    var administrative = new RegionLayer(map, 1, function (dataRecord, geoRecord) {
+        return dataRecord.District + ' район' === geoRecord.region;
     });
 
-    var jeses = new RegionLayer(map, 0.2, function (dataRecord, geoJsonRecord) {
-        return dataRecord.Jes === geoJsonRecord.properties.name;
+    var jeses = new RegionLayer(map, 0.2, function (dataRecord, geoRecord) {
+        return dataRecord.Jes === geoRecord.public_service;
     });
 
     var loadedData;
 
-    var dataKey = 'f9d30d33-3427-4403-8bfe-4a0b33776092';
-    $.getJSON('http://portal.opendata.by/api/action/datastore/search.json?resource_id=' + dataKey, function (data) {
+    $.getJSON(DATA_URL, function (data) {
         var records = data.result.records;
         var heatmapCanvasData = [];
         for (var i = 0, l = records.length; i < l; i++) {
@@ -351,20 +360,19 @@
             return d.District;
         });
         d3process(records, 'Количество происшествий по жесам', function (d) {
-            debugger;
             return d.Jes && d.Jes != '0' ? d.Jes : 'неизв.';
         });
         processInfo(data);
     });
 
-    $.getJSON('http://portal.opendata.by/sites/default/files/l9.json', function (data) {
+    $.getJSON(REGIONS_BORDERS_URL, function (data) {
         administrative.data = data;
         if (loadedData) {
             administrative.process(loadedData);
         }
     });
 
-    $.getJSON('http://portal.opendata.by/sites/default/files/jes.json', function (data) {
+    $.getJSON(JES_BORDERS_URL, function (data) {
         jeses.data = data;
         if (loadedData) {
             jeses.process(loadedData);
