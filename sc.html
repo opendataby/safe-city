@@ -159,7 +159,7 @@
 <script>
     var API_BASE = 'http://odata.by/api/action/datastore/search.json?resource_id=';
     var DATA_URL = API_BASE + '1da37dfe-9665-4dd6-843a-cde0dfccff64&limit=2000';
-    var REGIONS_BORDERS_URL = API_BASE + 'f53dfb97-3654-4f8b-bd28-c129c9771944';
+    var REGIONS_BORDERS_URL = API_BASE + 'f53dfb97-3654-4f8b-bd28-c129c9771944&filters[city]=Минск&fields=cityAdministrativeRegion,geojson';
     var JES_BORDERS_URL = API_BASE + 'd48086fc-ea60-4f48-a89f-be4e1c88395e&limit=200';
 
     var map = L.map('map-container').setView([53.9022756, 27.5618753], 11);
@@ -170,7 +170,7 @@
 
     L.control.fullscreen().addTo(map);
 
-    var RegionLayer = function (map, subMultiplier, pointInRegion) {
+    var RegionLayer = function (map, subMultiplier, nameField, pointInRegion) {
         var that = this;
         this.multiplier = 1;
         this.subMultiplier = subMultiplier;
@@ -283,28 +283,33 @@
         }
 
         this.process = function (data) {
-            var geometries = [];
+            var features = [];
             var records = that.data.result.records;
             for (var i = 0, li = records.length; i < li; i++) {
                 var record = records[i];
-                geometries.push(JSON.parse(record.geojson));
-                if (record.density === undefined) {
-                    record.density = 0;
-                    var rank = (data.result.total).toString().length - 1 - 2;
-                    that.multiplayer = Math.pow(10, rank >= 1 ? rank : 0);
-                }
+                var feature = {
+                    type: 'Feature',
+                    geometry: JSON.parse(record.geojson),
+                    properties: {
+                        name: record[nameField],
+                        density: 0
+                    }
+                };
+                features.push(feature);
+                var rank = (data.result.total).toString().length - 1 - 2;
+                that.multiplayer = Math.pow(10, rank >= 1 ? rank : 0);
                 var dataRecords = data.result.records;
                 for (var k = 0, lk = dataRecords.length; k < lk; k++) {
                     var dataRecord = dataRecords[k];
                     if (pointInRegion(dataRecord, record)) {
-                        record.density++;
+                        feature.properties.density++;
                     }
                 }
 
             }
             that.layer.addData({
-                'type': 'GeometryCollection',
-                'geometries': geometries
+                'type': 'FeatureCollection',
+                'features': features
             });
         }
     };
@@ -325,12 +330,12 @@
         }
     });
 
-    var administrative = new RegionLayer(map, 1, function (dataRecord, geoRecord) {
-        return dataRecord.District + ' район' === geoRecord.region;
+    var administrative = new RegionLayer(map, 10, 'cityAdministrativeRegion', function (dataRecord, geoRecord) {
+        return dataRecord.District + ' район' === geoRecord.cityAdministrativeRegion;
     });
 
-    var jeses = new RegionLayer(map, 0.2, function (dataRecord, geoRecord) {
-        return dataRecord.Jes === geoRecord.public_service;
+    var jeses = new RegionLayer(map, 1, 'publicService', function (dataRecord, geoRecord) {
+        return dataRecord.Jes === geoRecord.publicService;
     });
 
     var loadedData;
@@ -485,8 +490,20 @@
                 }
             }
         }
-        for (var administrative in countPerAdministrative) {
-            html += '<tr><td>' + administrative + '</td><td style="text-align: right">' + countPerAdministrative[administrative] + '</td></tr>';
+        var sortedKeys = Object.keys(countPerAdministrative).sort(function (a,b) {
+            return countPerAdministrative[b] - countPerAdministrative[a];
+        });
+        var other = 0;
+        for (var i = 0, li = sortedKeys.length; i < li; i++) {
+            var key = sortedKeys[i];
+            if (i < 20) {
+            html += '<tr><td>' + key + '</td><td style="text-align: right">' + countPerAdministrative[key] + '</td></tr>';
+            } else {
+                other += countPerAdministrative[key];
+            }
+        }
+        if (other) {
+            html += '<tr><td><b>Остальные</b></td><td style="text-align: right"><b>' + other + '</b></td></tr>';
         }
         html += '</table>';
         container.append(html);
@@ -504,8 +521,20 @@
                 }
             }
         }
-        for (var cause in countPerCause) {
-            html += '<tr><td>' + cause + '</td><td style="text-align: right">' + countPerCause[cause] + '</td></tr>';
+        var sortedKeys = Object.keys(countPerCause).sort(function (a,b) {
+            return countPerCause[b] - countPerCause[a];
+        });
+        var other = 0;
+        for (var i = 0, li = sortedKeys.length; i < li; i++) {
+            var key = sortedKeys[i];
+            if (i < 20) {
+                html += '<tr><td>' + key + '</td><td style="text-align: right">' + countPerCause[key] + '</td></tr>';
+            } else {
+                other += countPerCause[key];
+            }
+        }
+        if (other) {
+            html += '<tr><td><b>Остальные</b></td><td style="text-align: right"><b>' + other + '</b></td></tr>';
         }
         html += '</table>';
         container.append(html);
