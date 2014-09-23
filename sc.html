@@ -158,9 +158,9 @@
 
 <script>
     var API_BASE = 'http://odata.by/api/action/datastore/search.json?resource_id=';
-    var DATA_URL = API_BASE + '1da37dfe-9665-4dd6-843a-cde0dfccff64';
-    var REGIONS_BORDERS_URL = API_BASE + '81709047-53a4-4fe6-b082-6be10da8a1ac';
-    var JES_BORDERS_URL = API_BASE + '5d49d49e-a76c-4c0d-8043-7807d1496853';
+    var DATA_URL = API_BASE + '1da37dfe-9665-4dd6-843a-cde0dfccff64&limit=2000';
+    var REGIONS_BORDERS_URL = API_BASE + 'f53dfb97-3654-4f8b-bd28-c129c9771944';
+    var JES_BORDERS_URL = API_BASE + 'd48086fc-ea60-4f48-a89f-be4e1c88395e&limit=200';
 
     var map = L.map('map-container').setView([53.9022756, 27.5618753], 11);
     L.tileLayer('http://{s}.tile.openstreetmap.com/{z}/{x}/{y}.png', {
