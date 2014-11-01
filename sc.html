@@ -22,6 +22,21 @@
             height: 400px;
         }
 
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            background-image: url(data:image/gif;base64,R0lGODlhEAALAPQAAP///0pISOTk5N3d3e/v705MTEpISGpoaKalpY6MjM3NzWJgYH59fauqqpCPj9DQ0GRjY0xKSoF/f+zs7OPi4vb29nFwcOXl5fX19crKyru6utnY2PLy8gAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCwAAACwAAAAAEAALAAAFLSAgjmRpnqSgCuLKAq5AEIM4zDVw03ve27ifDgfkEYe04kDIDC5zrtYKRa2WQgAh+QQJCwAAACwAAAAAEAALAAAFJGBhGAVgnqhpHIeRvsDawqns0qeN5+y967tYLyicBYE7EYkYAgAh+QQJCwAAACwAAAAAEAALAAAFNiAgjothLOOIJAkiGgxjpGKiKMkbz7SN6zIawJcDwIK9W/HISxGBzdHTuBNOmcJVCyoUlk7CEAAh+QQJCwAAACwAAAAAEAALAAAFNSAgjqQIRRFUAo3jNGIkSdHqPI8Tz3V55zuaDacDyIQ+YrBH+hWPzJFzOQQaeavWi7oqnVIhACH5BAkLAAAALAAAAAAQAAsAAAUyICCOZGme1rJY5kRRk7hI0mJSVUXJtF3iOl7tltsBZsNfUegjAY3I5sgFY55KqdX1GgIAIfkECQsAAAAsAAAAABAACwAABTcgII5kaZ4kcV2EqLJipmnZhWGXaOOitm2aXQ4g7P2Ct2ER4AMul00kj5g0Al8tADY2y6C+4FIIACH5BAkLAAAALAAAAAAQAAsAAAUvICCOZGme5ERRk6iy7qpyHCVStA3gNa/7txxwlwv2isSacYUc+l4tADQGQ1mvpBAAIfkECQsAAAAsAAAAABAACwAABS8gII5kaZ7kRFGTqLLuqnIcJVK0DeA1r/u3HHCXC/aKxJpxhRz6Xi0ANAZDWa+kEAA7AAAAAAAAAAAA);
+            background-repeat: no-repeat;
+            background-position: center;
+            text-align: center;
+
+        }
+
         .container .jumbotron {
             margin: 30px 0 0;
             padding-top: 10px;
@@ -72,8 +87,6 @@
             margin-right: 8px;
             opacity: 0.7;
         }
-
-
 
         .bar {
           fill: steelblue;
@@ -145,6 +158,8 @@
     <p>Приложение разработано на основе данных суточной сводки Минского городского управления МЧС во ходе третьей
         Лаборатории будущего Hack for Future 3-4 мая 2014 г.</p>
 </footer>
+
+<div class="loader"></div>
 
 <script src="//code.jquery.com/jquery-2.1.1.min.js"></script>
 <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.js"></script>
@@ -338,6 +353,15 @@
         return dataRecord.Jes === geoRecord.publicService;
     });
 
+    var holder = 3;
+
+    var decreaseHolder = function () {
+        holder--;
+        if (!holder) {
+            $('.loader').hide();
+        }
+    };
+
     var loadedData;
 
     $.getJSON(DATA_URL, function (data) {
@@ -368,6 +392,7 @@
             return d.Jes && d.Jes != '0' ? d.Jes : 'неизв.';
         });
         processInfo(data);
+        decreaseHolder();
     });
 
     $.getJSON(REGIONS_BORDERS_URL, function (data) {
@@ -375,6 +400,7 @@
         if (loadedData) {
             administrative.process(loadedData);
         }
+        decreaseHolder();
     });
 
     $.getJSON(JES_BORDERS_URL, function (data) {
@@ -382,6 +408,7 @@
         if (loadedData) {
             jeses.process(loadedData);
         }
+        decreaseHolder();
     });
 
     map.addLayer(markers);
