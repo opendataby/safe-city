@@ -2,4 +2,4 @@
 
 ## Example
 
-http://opendataby.github.io/safe-city/sc.html
+http://opendataby.github.io/safe-city/
