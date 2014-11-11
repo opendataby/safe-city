@@ -437,6 +437,9 @@
         d3process(records, 'Количество происшествий по месяцам', function (d) {
             return d.Date.slice(0, 7);
         });
+        d3process(records, 'Количество происшествий сгрупированных по месяцам', function (d) {
+            return d.Date.slice(5, 7);
+        });
         d3process(records, 'Количество происшествий по районам', function (d) {
             return d.District;
         });
