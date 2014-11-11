@@ -473,7 +473,7 @@
         });
         d3process(records, 'Количество происшествий по жесам', function (d) {
             return d.Jes && d.Jes != '0' ? d.Jes : 'неизв.';
-        });
+        }, true);
         processInfo(records);
         processLifetime(data);
         decreaseHolder();
@@ -510,7 +510,7 @@
     }, null, {collapsed: false}).addTo(map);
 
 
-    function d3process(data, caption, nest) {
+    function d3process(data, caption, nest, rotate) {
         var container = $('#graph-container');
         container.append('<h3>' + caption + '</h3>');
 
@@ -555,10 +555,24 @@
             return d.values.length;
         })]);
 
-        svg.append("g")
-                .attr("class", "x axis")
-                .attr("transform", "translate(0," + height + ")")
-                .call(xAxis);
+        if (rotate) {
+            svg.append("g")
+                    .attr("class", "x axis")
+                    .attr("transform", "translate(0," + height + ")")
+                    .call(xAxis)
+                    .selectAll("text")
+                    .attr("y", 3)
+                    .attr("x", -6)
+                    .attr("dy", ".35em")
+                    .attr("transform", "rotate(-75)")
+                    .style("font-size", "8px")
+                    .style("text-anchor", "end");
+        } else {
+            svg.append("g")
+                    .attr("class", "x axis")
+                    .attr("transform", "translate(0," + height + ")")
+                    .call(xAxis);
+        }
 
         svg.append("g")
                 .attr("class", "y axis")
